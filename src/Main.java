@@ -1,8 +1,7 @@
-import Criptografia.AES;
-import Criptografia.Chaves;
-import Criptografia.Vernam;
+import Criptografia.*;
 import Banco.BancoInterface;
 
+import java.math.BigInteger;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -15,8 +14,13 @@ public class Main {
     static String cpf = null;
 
     static boolean autenticado = false;
-
+    static GeradorSimplesChavesRSA gerador = new GeradorSimplesChavesRSA();
+    static BigInteger[][] assinador;
     public static void main(String[] args) throws Exception {
+
+        gerador = new GeradorSimplesChavesRSA();
+
+        assinador = gerador.gerarParChaves(1327); //rsa 400
 
         try {
             Registry registro = LocateRegistry.getRegistry("localhost", 6002);
@@ -31,8 +35,11 @@ public class Main {
         boolean parar = false;
 
         Chaves chave = new Chaves();
-        chave.CHAVE_AES = "achoquenaovai123";
-        chave.CHAVE_VERNAM = "achoquenaovai123";
+        chave.CHAVE_AES = "achoquenaovai321";
+        chave.CHAVE_VERNAM = "achoquenaovai333";
+        chave.CHAVE_HMAC = "achoquenaovai123";
+        chave.chavePublica = assinador[0];
+
 
 
         stub.receberChave(ipCliente, chave);
@@ -40,6 +47,8 @@ public class Main {
 
         while (!parar) {
             String cpfCriptografado;
+            String HMAC;
+            String assinatura;
 
             if (autenticado) {
                 System.out.println("Bem vindo, "+ nome + ".");
@@ -59,9 +68,13 @@ public class Main {
                     case 1:
                         cpfCriptografado = Vernam.cifrar(cpf, chave.CHAVE_VERNAM); //
                         cpfCriptografado = AES.cifrar(cpfCriptografado, chave.CHAVE_AES);
+                        HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+
+
+                        assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
 
                         try {
-                            String saldoDescriptografado = stub.getSaldo(ipCliente, cpfCriptografado);
+                            String saldoDescriptografado = stub.getSaldo(assinatura, ipCliente, cpfCriptografado);
                             saldoDescriptografado = AES.decifrar(saldoDescriptografado, chave.CHAVE_AES);
                             saldoDescriptografado = Vernam.decifrar(saldoDescriptografado, chave.CHAVE_VERNAM);
 
@@ -76,11 +89,16 @@ public class Main {
 
                     cpfCriptografado = Vernam.cifrar(cpf, chave.CHAVE_VERNAM);
                     cpfCriptografado = AES.cifrar(cpfCriptografado, chave.CHAVE_AES);
-                    String valorCriptografado = Vernam.cifrar(valor, chave.CHAVE_VERNAM);
-                    valorCriptografado = AES.cifrar(valorCriptografado, chave.CHAVE_AES);
+
+                    String valorCriptografado;
+                        valorCriptografado = Vernam.cifrar(valor, chave.CHAVE_VERNAM);
+                        valorCriptografado = AES.cifrar(valorCriptografado, chave.CHAVE_AES);
+
+                        HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+                        assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
 
                     try {
-                        String saque = stub.sacar(ipCliente, cpfCriptografado, valorCriptografado);
+                        String saque = stub.sacar(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
                        if (saque == null) {
                            System.out.println("Saldo insuficiente.");
                            break;
@@ -103,8 +121,11 @@ public class Main {
                      valorCriptografado = Vernam.cifrar(valor, chave.CHAVE_VERNAM);
                     valorCriptografado = AES.cifrar(valorCriptografado, chave.CHAVE_AES);
 
+                    HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+                    assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
+
                     try {
-                       String depositar = stub.depositar(ipCliente, cpfCriptografado, valorCriptografado);
+                       String depositar = stub.depositar(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
                        if (depositar == null) {
                            System.out.println("Erro ao depositar.");
                            break;
@@ -133,8 +154,11 @@ public class Main {
                     valorCriptografado = Vernam.cifrar(valor, chave.CHAVE_VERNAM);
                     valorCriptografado = AES.cifrar(valorCriptografado, chave.CHAVE_AES);
 
+                        HMAC = ImplHMAC.gerarHMAC(contaOrigemCriptografada, chave.CHAVE_HMAC);
+                        assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
+
                     try {
-                        String transferiu = stub.transferir(ipCliente, contaOrigemCriptografada, contaDestinoCriptografada, valorCriptografado);
+                        String transferiu = stub.transferir(assinatura, ipCliente, contaOrigemCriptografada, contaDestinoCriptografada, valorCriptografado);
                         if(transferiu == null){
                             System.out.println("Erro ao transferir :(");
                             break;
@@ -161,8 +185,10 @@ public class Main {
                             case 1:
                                 cpfCriptografado= Vernam.cifrar(cpf, chave.CHAVE_VERNAM);
                                 cpfCriptografado = AES.cifrar(cpfCriptografado, chave.CHAVE_AES);
+                                HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+                                assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
                                 try {
-                                    String poupanca = stub.investirPoupanca(ipCliente, cpfCriptografado);
+                                    String poupanca = stub.investirPoupanca(assinatura, ipCliente, cpfCriptografado);
                                     if (poupanca == null) {
                                         System.out.println("Erro ao investir.");
                                         break;
@@ -187,8 +213,11 @@ public class Main {
                                 cpfCriptografado = AES.cifrar(cpfCriptografado, chave.CHAVE_AES);
                                 valorCriptografado = Vernam.cifrar(valor, chave.CHAVE_VERNAM);
                                 valorCriptografado = AES.cifrar(valorCriptografado, chave.CHAVE_AES);
+
+                                HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+                                assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
                                 try {
-                                    String renda = stub.investirRendaFixa(ipCliente, cpfCriptografado, valorCriptografado);
+                                    String renda = stub.investirRendaFixa(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
                                     if (renda == null) {
                                         System.out.println("Erro ao investir.");
                                         break;
@@ -236,8 +265,12 @@ public class Main {
                     String dadosCriptografados = Vernam.cifrar(dados, chave.CHAVE_VERNAM);
                     dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
 
+                    HMAC = ImplHMAC.gerarHMAC(dadosCriptografados, chave.CHAVE_HMAC);
+                    assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
+
                     try {
-                        stub.cadastro(ipCliente, dadosCriptografados);
+                        stub.cadastro(assinatura, ipCliente, dadosCriptografados);
+                        System.out.println("Cadastro realizado com sucesso!");
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -253,8 +286,11 @@ public class Main {
                     String senhaCriptografada = Vernam.cifrar(senha, chave.CHAVE_VERNAM);
                     senhaCriptografada = AES.cifrar(senhaCriptografada, chave.CHAVE_AES);
 
+                    HMAC = ImplHMAC.gerarHMAC(cpfCriptografado, chave.CHAVE_HMAC);
+                    assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
+
                     try {
-                        String conta = stub.logar(ipCliente, cpfCriptografado, senhaCriptografada);
+                        String conta = stub.logar(assinatura, ipCliente, cpfCriptografado, senhaCriptografada);
 
                         if (conta != null) {
                             conta = AES.decifrar(conta, chave.CHAVE_AES);

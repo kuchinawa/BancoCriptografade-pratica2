@@ -1,11 +1,10 @@
 package Banco;
 
-import Criptografia.AES;
-import Criptografia.Chaves;
-import Criptografia.Vernam;
+import Criptografia.*;
 import model.Usuario;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -17,60 +16,76 @@ public class Banco implements BancoInterface {
     public Map<String, Chaves> clientes = new HashMap<>();
     public Map<String, Usuario> contas;
     private static final String ARQUIVO_DADOS = "dados_banco.txt";
-    public Banco() {
+    static BigInteger[][] assinador;
+
+    static GeradorSimplesChavesRSA geradorChaves = new GeradorSimplesChavesRSA();
+    public Banco()  {
         contas = new HashMap<>();
+        //salvarDados();
         carregarDados();
+    }
+    @Override
+    public String logar(String assinatura, String ipCliente, String cpf, String senha) throws Exception {
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC, cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
+            if (clientes.containsKey(ipCliente)) {
+                Chaves chave = clientes.get(ipCliente);
+                String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
+                cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
+                String senhaDescriptografada = AES.decifrar(senha, chave.CHAVE_AES);
+                senhaDescriptografada = Vernam.decifrar(senhaDescriptografada, chave.CHAVE_VERNAM);
+                if (contas.containsKey(cpfDescriptografado)) {
+                    Usuario usuario = contas.get(cpfDescriptografado);
+                    if (usuario.getSenha().equals(senhaDescriptografada)) {
+                        String dadosCriptografados = usuario.getNome() + "-" + usuario.getCpf();
+                        dadosCriptografados = Vernam.cifrar(dadosCriptografados, chave.CHAVE_VERNAM);
+                        dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
+                        return dadosCriptografados;
+                    }
+                }
+            }
+        }
+        else {
+            System.out.println("Assinatura invalida!!!");
+        }return null;
     }
 
     @Override
-    public String logar(String ipCliente, String cpf, String senha) throws Exception {
-        if (clientes.containsKey(ipCliente)){
-            Chaves chave = clientes.get(ipCliente);
-            String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
-            cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
-            String senhaDescriptografada = AES.decifrar(senha, chave.CHAVE_AES);
-            senhaDescriptografada = Vernam.decifrar(senhaDescriptografada, chave.CHAVE_VERNAM);
-            if (contas.containsKey(cpfDescriptografado)) {
-                Usuario usuario = contas.get(cpfDescriptografado);
-                if (usuario.getSenha().equals(senhaDescriptografada)) {
-                    String dadosCriptografados = usuario.getNome() + "-" + usuario.getCpf();
+    public String cadastro(String assinatura,String ipCliente, String dados) throws Exception {
+        System.out.println("Assinatura: " + assinatura);
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC, dados);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
+            System.out.println("Assinatura valida!!!");
+            if (clientes.containsKey(ipCliente)) {
+                Chaves chave = clientes.get(ipCliente);
+                String dadosDescriptografados = AES.decifrar(dados, chave.CHAVE_AES);
+                dadosDescriptografados = Vernam.decifrar(dadosDescriptografados, chave.CHAVE_VERNAM);
+
+
+                String[] dadosUsuario = dadosDescriptografados.split("-");
+                String cpf = dadosUsuario[1];
+
+                if (!contas.containsKey(cpf)) {
+                    Usuario usuario = new Usuario(dadosDescriptografados);
+                    contas.put(usuario.getCpf(), usuario);
+                    salvarDados();
+                    String dadosCriptografados = usuario.toString();
+
                     dadosCriptografados = Vernam.cifrar(dadosCriptografados, chave.CHAVE_VERNAM);
                     dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
                     return dadosCriptografados;
                 }
+                return null;
             }
-        }
-        return null;
+        }else {
+            System.out.println("Assinatura invalida!!!");
+        }return null;
     }
 
     @Override
-    public String cadastro(String ipCliente, String dados) throws Exception {
-        if (clientes.containsKey(ipCliente)){
-            Chaves chave = clientes.get(ipCliente);
-            String dadosDescriptografados = AES.decifrar(dados, chave.CHAVE_AES);
-            dadosDescriptografados = Vernam.decifrar(dadosDescriptografados, chave.CHAVE_VERNAM);
-
-
-            String[] dadosUsuario = dadosDescriptografados.split("-");
-            String cpf = dadosUsuario[1];
-
-            if (!contas.containsKey(cpf)){
-                Usuario usuario = new Usuario(dadosDescriptografados);
-                contas.put(usuario.getCpf(), usuario);
-                salvarDados();
-                String dadosCriptografados = usuario.toString();
-
-                dadosCriptografados = Vernam.cifrar(dadosCriptografados, chave.CHAVE_VERNAM);
-                dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
-                return dadosCriptografados;
-            }
-            return null;
-        }
-        return null;
-    }
-
-    @Override
-    public String sacar(String ipCliente, String cpf, String valor) throws Exception {
+    public String sacar(String assinatura,String ipCliente, String cpf, String valor) throws Exception {
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
         if (clientes.containsKey(ipCliente)){
             Chaves chave = clientes.get(ipCliente);
             String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
@@ -96,11 +111,17 @@ public class Banco implements BancoInterface {
                 return dadosCriptografados;
             }
         }
-        return null;
+        }else {
+            System.out.println("Assinatura invalida!!!");
+        }
+        return  null;
     }
 
     @Override
-    public String depositar(String ipCliente, String cpf, String valor) throws Exception {
+    public String depositar(String assinatura,String ipCliente, String cpf, String valor) throws Exception {
+
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
         if (clientes.containsKey(ipCliente)){
             Chaves chave = clientes.get(ipCliente);
             String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
@@ -123,11 +144,18 @@ public class Banco implements BancoInterface {
 
             return dadosCriptografados;
         }
+        }else{
+            System.out.println("Assinatura invalida!!!");
+        }
         return null;
     }
 
     @Override
-    public String transferir(String ipCliente, String cpfOrigem, String cpfDestino, String valor) throws Exception {
+    public String transferir(String assinatura,String ipCliente, String cpfOrigem, String cpfDestino, String valor) throws Exception {
+
+
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpfOrigem);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
         if (clientes.containsKey(ipCliente)){
             Chaves chave = clientes.get(ipCliente);
             String cpfOrigemDescriptografado = AES.decifrar(cpfOrigem, chave.CHAVE_AES);
@@ -159,29 +187,36 @@ public class Banco implements BancoInterface {
             }
             return null;
         }
-        return null;
+        }else{
+            System.out.println("Assinatura Invalida!!!");
+        }return null;
     }
 
     @Override
-    public String getSaldo(String ipCliente, String cpf) throws Exception {
-        if (clientes.containsKey(ipCliente)){
-            Chaves chave = clientes.get(ipCliente);
-            String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
-            cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
+    public String getSaldo(String assinatura, String ipCliente, String cpf) throws Exception {
 
-            if (!contas.containsKey(cpfDescriptografado)) {
-                return null;
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
+            if (clientes.containsKey(ipCliente)) {
+                Chaves chave = clientes.get(ipCliente);
+                String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
+                cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
+
+                if (!contas.containsKey(cpfDescriptografado)) {
+                    return null;
+                }
+                Usuario usuario = contas.get(cpfDescriptografado);
+
+                String saldoCriptografo = Vernam.cifrar(usuario.getSaldo(), chave.CHAVE_VERNAM);
+                saldoCriptografo = AES.cifrar(saldoCriptografo, chave.CHAVE_AES);
+
+                return saldoCriptografo;
             }
-            Usuario usuario = contas.get(cpfDescriptografado);
 
-            String saldoCriptografo = Vernam.cifrar(usuario.getSaldo(), chave.CHAVE_VERNAM);
-            saldoCriptografo = AES.cifrar(saldoCriptografo, chave.CHAVE_AES);
-
-            return saldoCriptografo;
-        }
-        return null;
+        }else{
+            System.out.println("Asinatura invalida!!!");
+        }return null;
     }
-
     @Override
     public void receberChave(String ipCliente, Chaves chave) throws RemoteException {
         clientes.put(ipCliente, chave);
@@ -189,37 +224,45 @@ public class Banco implements BancoInterface {
 
 
     @Override
-    public String investirPoupanca(String ipCliente, String cpf) throws Exception {
-        if (clientes.containsKey(ipCliente)){
-            Chaves chave = clientes.get(ipCliente);
-            String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
-            cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
+    public String investirPoupanca(String assinatura, String ipCliente, String cpf) throws Exception {
 
-            if (!contas.containsKey(cpfDescriptografado)) {
-                return null;
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
+            if (clientes.containsKey(ipCliente)) {
+                Chaves chave = clientes.get(ipCliente);
+                String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
+                cpfDescriptografado = Vernam.decifrar(cpfDescriptografado, chave.CHAVE_VERNAM);
+
+                if (!contas.containsKey(cpfDescriptografado)) {
+                    return null;
+                }
+                Usuario usuario = contas.get(cpfDescriptografado);
+                double saldo = Double.parseDouble(usuario.getSaldo());
+
+                double taxaJuros = 0.005;
+                int vezesPorPeriodo = 1;
+
+
+                double valorAplicado3Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 3);
+                double valorAplicado6Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 6);
+                double valorAplicado12Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 12);
+
+                String retorno = usuario.getSaldo() + "-" + String.valueOf(valorAplicado3Meses) + "-" + String.valueOf(valorAplicado6Meses) + "-" + String.valueOf(valorAplicado12Meses);
+
+                retorno = Vernam.cifrar(retorno, chave.CHAVE_VERNAM);
+                retorno = AES.cifrar(retorno, chave.CHAVE_AES);
+                return retorno;
             }
-            Usuario usuario = contas.get(cpfDescriptografado);
-            double saldo = Double.parseDouble(usuario.getSaldo());
-
-            double taxaJuros = 0.005;
-            int vezesPorPeriodo = 1;
-
-
-            double valorAplicado3Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 3);
-            double valorAplicado6Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 6);
-            double valorAplicado12Meses = saldo * Math.pow(1 + taxaJuros / vezesPorPeriodo, vezesPorPeriodo * 12);
-
-            String retorno = usuario.getSaldo() + "-" + String.valueOf(valorAplicado3Meses) + "-" + String.valueOf(valorAplicado6Meses) + "-" + String.valueOf(valorAplicado12Meses);
-
-            retorno = Vernam.cifrar(retorno, chave.CHAVE_VERNAM);
-            retorno = AES.cifrar(retorno, chave.CHAVE_AES);
-            return retorno;
-        }
-        return null;
+        }else {
+            System.out.println("Assinatura invalida!!!");
+        } return null;
     }
 
     @Override
-    public String investirRendaFixa(String ipCliente, String cpf, String valor) throws RemoteException, Exception {
+    public String investirRendaFixa(String assinatura, String ipCliente, String cpf, String valor) throws RemoteException, Exception {
+
+        String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC,cpf);
+        if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
         if (clientes.containsKey(ipCliente)){
             Chaves chave = clientes.get(ipCliente);
             String cpfDescriptografado = AES.decifrar(cpf, chave.CHAVE_AES);
@@ -265,17 +308,20 @@ public class Banco implements BancoInterface {
         }
             System.out.println("INVASOR DETECTADO!!!");
         return null;
+    }else{
+            System.out.println("Assinatura invalida!!!");
+        }return null;
     }
 
     public static void main(String[] args) {
+        geradorChaves = new GeradorSimplesChavesRSA();
+        assinador = geradorChaves.gerarParChaves(1327); //rsa 400
         try {
             Banco refObjetoRemoto = new Banco();
             BancoInterface RefServer = (BancoInterface) UnicastRemoteObject
                     .exportObject(refObjetoRemoto, 6002);
             Registry registro = LocateRegistry.createRegistry(6002);
             registro.bind("Banco", RefServer);
-
-
         }catch (Exception e) {
             System.err.println("Banco: " + e.toString());
             e.printStackTrace();
