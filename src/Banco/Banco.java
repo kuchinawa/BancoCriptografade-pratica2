@@ -114,8 +114,9 @@ public class Banco implements BancoInterface {
                     dadosCriptografados = Vernam.cifrar(dadosCriptografados, chave.CHAVE_VERNAM);
                     dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
 
-
-                    return dadosCriptografados;
+                    String hmacServidor = ImplHMAC.gerarHMAC(dadosCriptografados, clientes.get(ipCliente).CHAVE_HMAC);
+                    String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                    return dadosCriptografados + "§"+ assinaturaServidor;
                 }
             }
         }else {
@@ -149,7 +150,11 @@ public class Banco implements BancoInterface {
                 dadosCriptografados = Vernam.cifrar(dadosCriptografados, chave.CHAVE_VERNAM);
                 dadosCriptografados = AES.cifrar(dadosCriptografados, chave.CHAVE_AES);
 
-                return dadosCriptografados;
+                String hmacServidor = ImplHMAC.gerarHMAC(dadosCriptografados, clientes.get(ipCliente).CHAVE_HMAC);
+                String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                return dadosCriptografados + "§"+ assinaturaServidor;
+
+
             }
         }else{
             System.out.println("Assinatura invalida!!!");
@@ -188,7 +193,10 @@ public class Banco implements BancoInterface {
                     retorno = Vernam.cifrar(retorno, chave.CHAVE_VERNAM);
                     retorno = AES.cifrar(retorno, chave.CHAVE_AES);
 
-                    return retorno;
+                    String hmacServidor = ImplHMAC.gerarHMAC(retorno, clientes.get(ipCliente).CHAVE_HMAC);
+                    String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                    return retorno + "§"+ assinaturaServidor;
+
                 }
                 return null;
             }
@@ -217,8 +225,6 @@ public class Banco implements BancoInterface {
 
                 String hmacServidor = ImplHMAC.gerarHMAC(saldoCriptografo, clientes.get(ipCliente).CHAVE_HMAC);
                 String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
-                System.out.println("Assinatura: " + assinaturaServidor);
-                System.out.println("HMAC: " + hmacServidor);
                 return saldoCriptografo + "§"+ assinaturaServidor;
             }
 
@@ -260,7 +266,12 @@ public class Banco implements BancoInterface {
 
                 retorno = Vernam.cifrar(retorno, chave.CHAVE_VERNAM);
                 retorno = AES.cifrar(retorno, chave.CHAVE_AES);
-                return retorno;
+
+
+                String hmacServidor = ImplHMAC.gerarHMAC(retorno, clientes.get(ipCliente).CHAVE_HMAC);
+                String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                return retorno + "§"+ assinaturaServidor;
+
             }
         }else {
             System.out.println("Assinatura invalida!!!");
@@ -313,7 +324,11 @@ public class Banco implements BancoInterface {
 
                 retorno = Vernam.cifrar(retorno, chave.CHAVE_VERNAM);
                 retorno = AES.cifrar(retorno, chave.CHAVE_AES);
-                return retorno;
+
+
+                String hmacServidor = ImplHMAC.gerarHMAC(retorno, clientes.get(ipCliente).CHAVE_HMAC);
+                String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                return retorno + "§"+ assinaturaServidor;
             }
             System.out.println("INVASOR DETECTADO!!!");
             return null;

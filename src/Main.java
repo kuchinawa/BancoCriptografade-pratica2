@@ -77,15 +77,9 @@ public class Main {
                             //ipCliente = "31231231";
                             String saldoDescriptografado = stub.getSaldo(assinatura, ipCliente, cpfCriptografado);
                             String[] resposta = saldoDescriptografado.split("§");
-                            System.out.println("Hmac " + HMAC);
-                            System.out.println("resposta[0] "+resposta[0]);
-                            System.out.println("resposta[1] "+resposta[1]);
                             saldoDescriptografado = resposta[0];
-                            System.out.println("saldodescriptogrado "+saldoDescriptografado);
                             assinatura = resposta[1];
-                            System.out.println("assinatura "+assinatura);
                             HMAC = ImplHMAC.gerarHMAC(saldoDescriptografado, chave.CHAVE_HMAC);
-                            System.out.println("Hmac " + HMAC);
 
                             if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
                                 System.out.println("Assinatura inválida.");
@@ -93,7 +87,6 @@ public class Main {
                             }
                             saldoDescriptografado = AES.decifrar(saldoDescriptografado, chave.CHAVE_AES);
                             saldoDescriptografado = Vernam.decifrar(saldoDescriptografado, chave.CHAVE_VERNAM);
-
 
 
                             System.out.println("Seu saldo é de " + saldoDescriptografado + " dinheiros.");
@@ -117,6 +110,16 @@ public class Main {
 
                         try {
                             String saque = stub.sacar(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
+                            String[] resposta = saque.split("§");
+                            saque = resposta[0];
+                            assinatura = resposta[1];
+                            HMAC = ImplHMAC.gerarHMAC(saque, chave.CHAVE_HMAC);
+
+                            if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                System.out.println("Assinatura inválida.");
+                                break;
+                            }
+
                             if (saque == null) {
                                 System.out.println("Saldo insuficiente.");
                                 break;
@@ -144,6 +147,17 @@ public class Main {
 
                         try {
                             String depositar = stub.depositar(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
+                            String[] resposta = depositar.split("§");
+                            depositar = resposta[0];
+                            assinatura = resposta[1];
+                            HMAC = ImplHMAC.gerarHMAC(depositar, chave.CHAVE_HMAC);
+
+                            if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                System.out.println("Assinatura inválida.");
+                                break;
+                            }
+
+
                             if (depositar == null) {
                                 System.out.println("Erro ao depositar.");
                                 break;
@@ -177,6 +191,18 @@ public class Main {
 
                         try {
                             String transferiu = stub.transferir(assinatura, ipCliente, contaOrigemCriptografada, contaDestinoCriptografada, valorCriptografado);
+
+                            String[] resposta = transferiu.split("§");
+                            transferiu = resposta[0];
+                            assinatura = resposta[1];
+                            HMAC = ImplHMAC.gerarHMAC(transferiu, chave.CHAVE_HMAC);
+
+                            if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                System.out.println("Assinatura inválida.");
+                                break;
+                            }
+
+
                             if(transferiu == null){
                                 System.out.println("Erro ao transferir :(");
                                 break;
@@ -207,6 +233,18 @@ public class Main {
                                 assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
                                 try {
                                     String poupanca = stub.investirPoupanca(assinatura, ipCliente, cpfCriptografado);
+
+                                    String[] resposta = poupanca.split("§");
+                                    poupanca = resposta[0];
+                                    assinatura = resposta[1];
+                                    HMAC = ImplHMAC.gerarHMAC(poupanca, chave.CHAVE_HMAC);
+
+                                    if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                        System.out.println("Assinatura inválida.");
+                                        break;
+                                    }
+
+
                                     if (poupanca == null) {
                                         System.out.println("Erro ao investir.");
                                         break;
@@ -236,6 +274,16 @@ public class Main {
                                 assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
                                 try {
                                     String renda = stub.investirRendaFixa(assinatura, ipCliente, cpfCriptografado, valorCriptografado);
+                                    String[] resposta = renda.split("§");
+                                    renda = resposta[0];
+                                    assinatura = resposta[1];
+                                    HMAC = ImplHMAC.gerarHMAC(renda, chave.CHAVE_HMAC);
+
+                                    if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                        System.out.println("Assinatura inválida.");
+                                        break;
+                                    }
+
                                     if (renda == null) {
                                         System.out.println("Erro ao investir.");
                                         break;
