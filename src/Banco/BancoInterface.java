@@ -2,6 +2,7 @@ package Banco;
 
 import Criptografia.Chaves;
 
+import java.math.BigInteger;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -23,4 +24,5 @@ public interface BancoInterface extends Remote {
     String investirPoupanca(String assinatura,String ipCliente, String cpf) throws RemoteException, Exception;
     String investirRendaFixa(String assinatura,String ipCliente, String cpf, String valor) throws RemoteException, Exception;
 
+    BigInteger[] getChavePublica() throws Exception;
 }

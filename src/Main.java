@@ -43,7 +43,7 @@ public class Main {
 
 
         stub.receberChave(ipCliente, chave);
-
+        BigInteger[] chavePublica = stub.getChavePublica();
 
         while (!parar) {
             String cpfCriptografado;
@@ -74,9 +74,27 @@ public class Main {
                         assinatura = gerador.assinarMensagem(HMAC, assinador[1]);
 
                         try {
+                            //ipCliente = "31231231";
                             String saldoDescriptografado = stub.getSaldo(assinatura, ipCliente, cpfCriptografado);
+                            String[] resposta = saldoDescriptografado.split("§");
+                            System.out.println("Hmac " + HMAC);
+                            System.out.println("resposta[0] "+resposta[0]);
+                            System.out.println("resposta[1] "+resposta[1]);
+                            saldoDescriptografado = resposta[0];
+                            System.out.println("saldodescriptogrado "+saldoDescriptografado);
+                            assinatura = resposta[1];
+                            System.out.println("assinatura "+assinatura);
+                            HMAC = ImplHMAC.gerarHMAC(saldoDescriptografado, chave.CHAVE_HMAC);
+                            System.out.println("Hmac " + HMAC);
+
+                            if (!gerador.verificarAssinatura(HMAC, assinatura , chavePublica)) {
+                                System.out.println("Assinatura inválida.");
+                                break;
+                            }
                             saldoDescriptografado = AES.decifrar(saldoDescriptografado, chave.CHAVE_AES);
                             saldoDescriptografado = Vernam.decifrar(saldoDescriptografado, chave.CHAVE_VERNAM);
+
+
 
                             System.out.println("Seu saldo é de " + saldoDescriptografado + " dinheiros.");
                         } catch (Exception e) {

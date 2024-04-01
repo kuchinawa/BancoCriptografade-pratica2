@@ -18,6 +18,7 @@ public class Banco implements BancoInterface {
     private static final String ARQUIVO_DADOS = "dados_banco.txt";
     static BigInteger[][] assinador;
 
+
     static GeradorSimplesChavesRSA geradorChaves = new GeradorSimplesChavesRSA();
     public Banco()  {
         contas = new HashMap<>();
@@ -25,10 +26,6 @@ public class Banco implements BancoInterface {
         carregarDados();
     }
     @Override
-
-
-   //     String hmac = ImplHMAC.gerarHMAC(clientes.get(ipCliente).CHAVE_HMAC, cpf);
-  //      if (geradorChaves.verificarAssinatura(hmac, assinatura, clientes.get(ipCliente).chavePublica)) {
 
    //     }
     public String logar(String assinatura, String ipCliente, String cpf, String senha) throws Exception {
@@ -218,7 +215,11 @@ public class Banco implements BancoInterface {
                 String saldoCriptografo = Vernam.cifrar(usuario.getSaldo(), chave.CHAVE_VERNAM);
                 saldoCriptografo = AES.cifrar(saldoCriptografo, chave.CHAVE_AES);
 
-                return saldoCriptografo;
+                String hmacServidor = ImplHMAC.gerarHMAC(saldoCriptografo, clientes.get(ipCliente).CHAVE_HMAC);
+                String assinaturaServidor = geradorChaves.assinarMensagem(hmacServidor, assinador[1]);
+                System.out.println("Assinatura: " + assinaturaServidor);
+                System.out.println("HMAC: " + hmacServidor);
+                return saldoCriptografo + "§"+ assinaturaServidor;
             }
 
         }else{
@@ -319,6 +320,9 @@ public class Banco implements BancoInterface {
         }else{
             System.out.println("Assinatura invalida!!!");
         }return null;
+    }
+    public BigInteger[] getChavePublica() {
+        return assinador[0];
     }
 
     public static void main(String[] args) {

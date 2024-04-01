@@ -10,8 +10,8 @@ public class GeradorSimplesChavesRSA {
     public BigInteger[][] gerarParChaves(int tamanhoBit) {
         BigInteger p = BigInteger.probablePrime(tamanhoBit / 2, aleatorio);
         BigInteger q = BigInteger.probablePrime(tamanhoBit / 2, aleatorio);
-        BigInteger n = p.multiply(q);
-        BigInteger m = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
+        BigInteger n = p.multiply(q); //
+        BigInteger m = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE)); //
         BigInteger e = BigInteger.probablePrime(tamanhoBit / 2, aleatorio); //
         while (m.gcd(e).intValue() > 1) {
             e = e.add(new BigInteger("2"));
@@ -32,16 +32,11 @@ public class GeradorSimplesChavesRSA {
 
     public boolean verificarAssinatura(String hash, String assinaturaBase64, BigInteger[] chavePublica) {
         BigInteger m = new BigInteger(hash.getBytes());
-        System.out.println("msg> " + hash);
-        System.out.println(m);
         BigInteger e = chavePublica[0];
         BigInteger n = chavePublica[1];
         BigInteger assinatura = new BigInteger(Base64.getDecoder().decode(assinaturaBase64));
         BigInteger mVerificado = assinatura.modPow(e, n);
-        System.out.println(mVerificado);
         String mVerif = new String(mVerificado.toByteArray());
-        System.out.println("mVerif> " + mVerif);
-        System.out.println(hash.equals(mVerif));
         return hash.equals(mVerif);
     }
 }
