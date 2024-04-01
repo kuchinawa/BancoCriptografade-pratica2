@@ -18,7 +18,6 @@ public class Banco implements BancoInterface {
     private static final String ARQUIVO_DADOS = "dados_banco.txt";
     static BigInteger[][] assinador;
 
-
     static GeradorSimplesChavesRSA geradorChaves = new GeradorSimplesChavesRSA();
     public Banco()  {
         contas = new HashMap<>();

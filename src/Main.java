@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 public class Main {
     static BancoInterface stub;
-    static String ipCliente = "5553";
+    static String ipCliente = "6999";
     static String nome = null;
     static String cpf = null;
 

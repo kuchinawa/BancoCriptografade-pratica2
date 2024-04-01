@@ -26,7 +26,7 @@ public class GeradorSimplesChavesRSA {
         BigInteger m = new BigInteger(mensagem.getBytes());
         BigInteger d = chavePrivada[0];
         BigInteger n = chavePrivada[1];
-        BigInteger assinatura = m.modPow(d, n);
+        BigInteger assinatura = m.modPow(d, n); //
         return Base64.getEncoder().encodeToString(assinatura.toByteArray());
     }
 
